@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>פורטל עולם התורה</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 20px; background: #f0f2f5; }
+h1 { font-size: 2em; margin-bottom: 20px; text-align:center; }
+select, input, textarea { padding: 8px; margin: 5px 0; width: 100%; box-sizing: border-box; border-radius:5px; border:1px solid #ccc; }
+
+#linkList { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top:20px;}
+.link-card { background: #fff; padding: 0; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; transition: transform 0.2s; overflow: hidden; }
+.link-card:hover { transform: scale(1.02); }
+
+.link-card img { width: 100%; height: 150px; object-fit: contain; background: #f0f0f0; cursor: pointer; }
+.link-card .card-content { padding: 10px; display:flex; flex-direction: column; gap:5px; flex-grow:1; }
+
+.link-card a { font-weight: bold; color: #1a0dab; text-decoration: none; }
+.link-card p { font-size: 0.9em; color: #333; margin: 0; }
+
+.card-buttons { display:flex; justify-content:flex-end; gap:5px; margin-top:10px; }
+button { padding: 7px 15px; cursor: pointer; border-radius:5px; border:none; }
+button.delete { background: #ff4d4d; color: #fff; }
+button.edit { background: #4CAF50; color: #fff; }
+.admin { border: 1px solid #ccc; padding: 15px; background: #fff; margin-top: 20px; border-radius: 10px; max-width:500px; margin-left:auto; margin-right:auto; }
+button.contact { background: #007BFF; color: #fff; margin-top:10px; width:100%; }
+
+@media (max-width: 600px) {
+  #linkList { grid-template-columns: 1fr; }
+  .admin { width: 95%; }
+}
+
+/* Overlay registration form */
+#registrationOverlay { display:none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.4); z-index: 1000; display:flex; justify-content:center; align-items:center; }
+#registrationOverlay form { background:white; padding:20px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.2); width:90%; max-width:400px; }
+</style>
+</head>
+<body>
+
+<h1>פורטל עולם התורה</h1>
+<h2><center>מתחברים. מכל מקום.<center></h2>
+
+<label>קטגוריה: </label>
+<select id="categoryFilter">
+  <option value="All">כל הקטגוריות</option>
+  <option value="מידע על שיעורי תורה">מידע על שיעורי תורה</option>
+  <option value="אתרי תוכן תורני">אתרי תוכן תורני</option>
+  <option value="קורסים ללימוד הלכה">קורסים ללימוד הלכה</option>
+</select>
+
+<label>חיפוש: </label>
+<input type="text" id="searchQuery" placeholder="חיפוש...">
+
+<div id="linkList"></div>
+
+<div class="admin">
+  <h3>כניסה לניהול</h3>
+  <input type="password" id="adminPassword" placeholder="סיסמה">
+  <button onclick="loginAdmin()">כניסה</button>
+  
+  <div id="adminPanel" style="display:none; margin-top:10px;">
+    <h4>ניהול קישורים</h4>
+    <input type="text" id="newTitle" placeholder="כותרת">
+    <input type="text" id="newUrl" placeholder="כתובת URL">
+    <input type="text" id="newImage" placeholder="כתובת תמונה (URL)">
+    <textarea id="newDescription" placeholder="תיאור קצר"></textarea>
+    <select id="newCategory">
+      <option value="מידע על שיעורי תורה">מידע על שיעורי תורה</option>
+      <option value="אתרי תוכן תורני">אתרי תוכן תורני</option>
+      <option value="קורסים ללימוד הלכה">קורסים ללימוד הלכה</option>
+    </select>
+    <button onclick="addLink()">הוסף קישור</button>
+    <button class="contact" onclick="contactAdmin()">צור קשר עם מנהל האתר</button>
+    <hr>
+    <button onclick="downloadJSON()">שמירה ל-JSON</button>
+    <input type="file" id="uploadJSON" accept=".json" style="margin-top:10px;">
+    <button onclick="uploadJSON()">טעינת JSON</button>
+  </div>
+</div>
+
+<!-- Registration overlay form -->
+<div id="registrationOverlay">
+  <form id="emailForm" action="https://formspree.io/f/xldarlwb" method="POST">
+    <label for="userEmail">הכנס את המייל שלך:</label>
+    <input type="email" id="userEmail" name="email" required placeholder="example@mail.com">
+    <p style="font-size:0.9em; color:#555;">
+      בהגשת הטופס אתה מצטרף למעגל העדכונים של האתר — הישאר מעודכן!
+    </p>
+    <button type="submit">שלח</button>
+    <button type="button" onclick="hideRegistrationOverlay()" style="margin-top:10px; background:#ccc; color:#000;">לא עכשיו</button>
+  </form>
+</div>
+
+<script>
+const ADMIN_PASSWORD = "1234";
+
+/* 
+  רשימת הקישורים המשולבת (מקוריים + פריטים חדשים),
+  ממוינת לפי הסדר: 1) קורסים, 2) אתרי תוכן, 3) שיעורי תורה.
+  לא נוגעים בשום דבר חוץ מהנתונים עצמם.
+*/
+let links = JSON.parse(localStorage.getItem('links')) || [
+  /* ===== 1) קורסים ללימוד הלכה ===== */
+  {
+    "title": "קורס פוסק לביתו - הרב אהרן דואר",
+    "url": "https://lomdimkahalacha1.com/",
+    "image": "https://lomdimkahalacha1.com/logo_white_orginal.png",
+    "description": "קורס ללימוד הלכה בשיטת 'רב פוסק לביתו'",
+    "category": "קורסים ללימוד הלכה"
+  },
+  {
+    "title": "מכון יגדיל תורה",
+    "url": "https://yagdiltora.co.il/",
+    "category": "קורסים ללימוד הלכה",
+    "image": "https://yagdiltora.co.il/wp-content/uploads/2021/11/%D7%9C%D7%95%D7%92%D7%95-%D7%A9%D7%A7%D7%95%D7%A3-01-150x150.png",
+    "description": "מכון לימוד והכנה למבחני רבנות"
+  },
+  {
+    "title": "מכון מ.ל.מ",
+    "url": "https://www.malaam.org.il/",
+    "category": "קורסים ללימוד הלכה",
+    "image": "https://www.malaam.org.il/wp-content/uploads/2023/07/Image_2.png",
+    "description": "מרכז למשפטי התורה - לימודי רבנות/ דיינות/ טוען רבני"
+  },
+  {
+    "title": "עירוב כהלכה",
+    "url": "https://eruv.org.il/",
+    "image": "https://eruv.org.il/wp-content/uploads/2024/06/logoEiruv.svg",
+    "description": "לימוד והכשרה- ידע הלכתי ופרקטיקה",
+    "category": "קורסים ללימוד הלכה"
+  },
+
+  /* ===== 2) אתרי תוכן תורני ===== */
+  {
+    "title": "עולמות",
+    "url": "https://olamot.net/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://olamot.net/wp-content/uploads/2021/12/logo.png",
+    "description": "מאגר שיעורים במגוון סוגיות\nהלכתיות עם דפי מקורות"
+  },
+  {
+    "title": "כושרות",
+    "url": "https://www.kosharot.co.il/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://www.kosharot.co.il/designFiles/logo.png",
+    "description": "ייעוץ והכוונה בכשרות"
+  },
+  {
+    "title": "דין- שאל את הרב",
+    "url": "https://din.org.il/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://din.org.il/wp-content/uploads/2020/01/logo-768x802.png",
+    "description": "מאגר שו\"ת בעניני הלכה"
+  },
+  {
+    "title": "הילכתא - לדעת לחיות כהלכה",
+    "url": "https://hilchata.co.il/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://hilchata.co.il/wp-content/uploads/2022/09/logo-300x138.png",
+    "description": "שיעורי הלכה ומידע הלכתי"
+  },
+  {
+    "title": "מנחת אשר - הרב אשר וייס",
+    "url": "https://minchasasher.com/he/",
+    "image": "https://minchasasher.com/wp-content/uploads/2020/06/video-placeholder.jpg",
+    "description": "",
+    "category": "אתרי תוכן תורני"
+  },
+  {
+    "title": "להבין- שיעורי רבי משה שפירא זצ\"ל",
+    "url": "https://lehavin.org/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://lehavin.org/wp-content/uploads/2019/12/B.png",
+    "description": "מאגר איכותי כולל הפניות ומקורות לעיון"
+  },
+  {
+    "title": "על התורה",
+    "url": "https://alhatorah.org/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://upload.wikimedia.org/wikipedia/he/thumb/1/1d/AlHatorah.png/1200px-AlHatorah.png",
+    "description": "מאגר טקסט תורני איכותי ללימוד והעמקה\nכולל כלים לניתוח והשוואה"
+  },
+  {
+    "title": "הדרנא",
+    "url": "https://hadrana.today/#/login",
+    "category": "אתרי תוכן תורני",
+    "image": "https://image.winudf.com/v2/image1/YXBwLmhhZHJhbmEudG9kYXlfc2NyZWVuXzBfMTU4MTM1MzE1OV8wMzk/screen-0.jpg?fakeurl=1&type=.jpg",
+    "description": "מערכת מעקב אישי\nללימוד הדף היומי"
+  },
+  {
+    "title": "פתחי עולם - הרב אליהו מאיר פייבלזון",
+    "url": "https://pitcheiolam.co.il/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://pitcheiolam.co.il/wp-content/uploads/2022/03/Asset-9@3x-1024x265.d110a0.webp",
+    "description": "שיעורים בעיון ובמחשבת ישראל\nמבית המדרש פתחי עולם"
+  },
+  {
+    "title": "בית המוסר - מי הדעת",
+    "url": "https://meihadaas.com/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://meihadaas.com/wp-content/uploads/2023/07/Mask-group-2-1.png",
+    "description": "שיעוריו של הרב ראובן לויכטר"
+  },
+  {
+    "title": "הרמב\"ם היומי",
+    "url": "https://yad14.co.il/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://yad14.co.il/wp-content/uploads/2021/11/%D7%9C%D7%95%D7%92%D7%95-%D7%A8%D7%9E%D7%91%D7%9D-%D7%99%D7%95%D7%9E%D7%99.png.webp",
+    "description": "שיעורי רמב\"ם יומי"
+  },
+  {
+    "title": "2 הלכות ביום",
+    "url": "https://2halachot.org/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://2halachot.org/wp-content/uploads/2023/07/%D7%9C%D7%95%D7%92%D7%95-%D7%9E%D7%A7%D7%95%D7%A8%D7%99-2.png",
+    "description": "מסלולי לימוד יומי באתר ובמייל במגוון נושאים"
+  },
+  {
+    "title": "קרוב אלי!",
+    "url": "https://www.karovelay.co.il/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://www.karovelay.co.il/wp-content/uploads/2019/12/logo_karovelay-e1597580177673.png",
+    "description": "מערכת לקביעת חברותות בכל חלקי התורה"
+  },
+  {
+    "title": "פורטל סמיכה לרבנות",
+    "url": "https://www.smicha.co.il/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://www.smicha.co.il/images/title.jpg",
+    "description": "פורטל מידע וספרי עזר ללימוד לרבנות"
+  },
+  {
+    "title": "אתר הכשרות",
+    "url": "https://ikr.org.il/index.php",
+    "category": "אתרי תוכן תורני",
+    "image": "https://ikr.org.il/designFiles/logo-icon.svg",
+    "description": "מידע כשרותי על מוצרים בתי עסק ומסעדות "
+  },
+  {
+    "title": "לימוד יומי - מאמרים קצרים בהלכה ובאגדה",
+    "url": "https://limudyomi.com/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://limudyomi.com/wp-content/uploads/2021/05/logo_limudyomi-1.svg",
+    "description": "בעריכת יחיאל וינרוט"
+  },
+  {
+    "title": "פרויקט פידברג לכתבי יד יהודיים",
+    "url": "https://fjms.genizah.org/?eraseCache=true",
+    "category": "אתרי תוכן תורני",
+    "image": "https://fjms.genizah.org/ImagesFJMS/logo.png",
+    "description": "אוסף גניזת קהיר, גניזת תימן, השוואת גירסאות תלמוד בבלי ועוד"
+  },
+  {
+    "title": "דיקטה",
+    "url": "https://dicta.org.il/",
+    "category": "אתרי תוכן תורני",
+    "image": "https://upload.wikimedia.org/wikipedia/he/f/f0/%D7%9C%D7%95%D7%92%D7%95_%D7%93%D7%99%D7%A7%D7%98%D7%94.jpg",
+    "description": "כלים דיגיטליים לעיבוד טקסטים "
+  },
+
+  /* ===== 3) מידע על שיעורי תורה ===== */
+  {
+    "title": "שיעור דף יומי - הרב אלי סטפנסקי (שעה 21:00) ",
+    "url": "https://Zoom.8MinDaf.com",
+    "category": "מידע על שיעורי תורה",
+    "image": "https://cdn.prod.website-files.com/638d1e939a16180ba7bca49d/638d4a762a2fb846c21685de_MDYLogo3x-p-500.png"
+  },
+  {
+    "title": "תנ\"ך יומי",
+    "url": "https://www.tanachyomi.co.il/",
+    "category": "מידע על שיעורי תורה",
+    "image": "https://www.tanachyomi.co.il/Logo.png",
+    "description": "לימוד כל התנ\"ך בשנה אחת"
+  },
+  {
+    "title": "פורטל הדף היומי",
+    "url": "https://daf-yomi.com/dafYomi.aspx",
+    "category": "מידע על שיעורי תורה",
+    "image": "https://daf-yomi.com/images/logo.gif",
+    "description": "מגוון עצום של שיעורי דף יומי, גמרות מבוארות ותכני עזר"
+  },
+  {
+    "title": "שיעורי סיני - הרב אורי ברילאנט",
+    "url": "https://www.youtube.com/@hadafhayomi",
+    "category": "מידע על שיעורי תורה",
+    "image": "https://yt3.googleusercontent.com/ytc/AIdro_nV5fdLiHAJd2iglFdtzM56FnOzgYyuQP7CCsYSTidqkjg=s160-c-k-c0x00ffffff-no-rj",
+    "description": "דף יומי קצר וברור"
+  },
+  {
+    "title": "מי הדעת - שיעורי הרב ראובן לויכטר",
+    "url": "https://meihadaas.com/",
+    "category": "מידע על שיעורי תורה",
+    "image": "https://meihadaas.com/wp-content/uploads/2023/07/Mask-group-2-1.png",
+    "description": ""
+  },
+  {
+    "title": "פתחי עולם - הרב אליהו מאיר פייבלזון",
+    "url": "https://pitcheiolam.co.il/",
+    "category": "מידע על שיעורי תורה",
+    "image": "https://pitcheiolam.co.il/wp-content/uploads/2022/03/Asset-9@3x-768x199.d110a0.webp",
+    "description": ""
+  },
+  {
+    "title": "ברוך שאמר - שיעורי הרב ברוך רוזנבלום",
+    "url": "https://www.haravbaruch.co.il/",
+    "category": "מידע על שיעורי תורה",
+    "image": "https://www.haravbaruch.co.il/wp-content/uploads/2020/09/Untitled-1-3.png",
+    "description": ""
+  },
+  {
+    "title": "ילקוט יוסף- שיעורי הרב יצחק יוסף",
+    "url": "https://yalkutyosef.co.il/",
+    "category": "מידע על שיעורי תורה",
+    "image": "https://yalkutyosef.co.il/wp-content/uploads/2021/02/%D7%99%D7%9C%D7%A7%D7%95%D7%98-%D7%99%D7%95%D7%A1%D7%A3-%D7%9C%D7%95%D7%92%D7%95.png",
+    "description": ""
+  }
+];
+
+const linkList = document.getElementById('linkList');
+const categoryFilter = document.getElementById('categoryFilter');
+const searchQuery = document.getElementById('searchQuery');
+let isAdmin = false;
+let editIndex = null;
+
+function renderLinks() {
+  const cat = categoryFilter.value;
+  const query = searchQuery.value.trim().toLowerCase();
+  linkList.innerHTML = '';
+
+  links.filter(l => 
+    (cat === "All" || l.category === cat) &&
+    (l.title.toLowerCase().includes(query) || l.url.toLowerCase().includes(query) || (l.description && l.description.toLowerCase().includes(query)))
+  ).forEach((link, i) => {
+    const div = document.createElement('div');
+    div.className = 'link-card';
+    div.innerHTML = `
+      <img src="${link.image || 'https://via.placeholder.com/400x150?text=ללא+תמונה'}" alt="תמונה">
+      <div class="card-content">
+        <a href="${link.url}" target="_blank">${link.title}</a>
+        <p>${link.description || ''}</p>
+        <p><em>${link.category}</em></p>
+        ${isAdmin ? `<div class="card-buttons">
+          <button class="edit" onclick="openEditModal(${i})">ערוך</button>
+          <button class="delete" onclick="removeLink(${i})">מחק</button>
+        </div>` : ''}
+      </div>
+    `;
+    linkList.appendChild(div);
+
+    const img = div.querySelector('img');
+    const a = div.querySelector('a');
+
+    img.addEventListener('click', () => {
+      if(localStorage.getItem("userEmail")){
+        window.open(a.href, '_blank');
+      } else {
+        showRegistrationOverlay();
+      }
+    });
+  });
+}
+
+function showRegistrationOverlay() {
+  document.getElementById("registrationOverlay").style.display = "flex";
+}
+function hideRegistrationOverlay() {
+  document.getElementById("registrationOverlay").style.display = "none";
+}
+
+function loginAdmin() {
+  const pw = document.getElementById('adminPassword').value;
+  if(pw === ADMIN_PASSWORD) {
+    document.getElementById('adminPanel').style.display = 'block';
+    isAdmin = true;
+    renderLinks();
+    alert("ברוך הבא לניהול");
+  } else alert("סיסמה שגויה");
+}
+
+function addLink() {
+  const title = document.getElementById('newTitle').value;
+  const url = document.getElementById('newUrl').value;
+  const image = document.getElementById('newImage').value;
+  const description = document.getElementById('newDescription').value;
+  const category = document.getElementById('newCategory').value;
+  if(!title || !url) { alert("יש למלא כותרת וכתובת"); return; }
+  links.push({title, url, category, image, description});
+  localStorage.setItem('links', JSON.stringify(links));
+  renderLinks();
+}
+
+function removeLink(index) {
+  if(!isAdmin) { alert("רק מנהל יכול למחוק קישורים"); return; }
+  if(confirm("למחוק את הקישור?")) {
+    links.splice(index, 1);
+    localStorage.setItem('links', JSON.stringify(links));
+    renderLinks();
+  }
+}
+
+// שמירה ל-JSON
+function downloadJSON() {
+  const dataStr = JSON.stringify(links, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "links.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// טעינת JSON מקובץ
+function uploadJSON() {
+  const fileInput = document.getElementById('uploadJSON');
+  const file = fileInput.files[0];
+  if (!file) { alert("בחר קובץ JSON לטעינה"); return; }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const json = JSON.parse(e.target.result);
+      if (Array.isArray(json)) {
+        links = json;
+        localStorage.setItem('links', JSON.stringify(links));
+        renderLinks();
+        alert("קובץ ה-JSON נטען בהצלחה!");
+      } else {
+        alert("קובץ JSON לא חוקי");
+      }
+    } catch (err) {
+      alert("שגיאה בקריאת הקובץ: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function contactAdmin() {
+  window.location.href = "mailto:itzik054853@gmail.com";
+}
+
+// טיפול בטופס הרשמה
+document.getElementById("emailForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  const email = document.getElementById("userEmail").value;
+  if(email){
+    localStorage.setItem("userEmail", email);
+    fetch(this.action, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({email})
+    }).then(res=>{
+      if(res.ok){
+        alert("תודה! ההרשמה בוצעה בהצלחה.");
+        hideRegistrationOverlay();
+        renderLinks(); // מאפשר שימוש
+      } else alert("שגיאה בשליחה");
+    }).catch(()=>alert("שגיאה בשליחה"));
+  }
+});
+
+categoryFilter.addEventListener('change', renderLinks);
+searchQuery.addEventListener('input', renderLinks);
+
+document.addEventListener("DOMContentLoaded", function(){
+  renderLinks();
+});
+</script>
+
+</body>
+</html>
