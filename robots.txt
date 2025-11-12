@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://1-five-inky-59.vercel.app/sitemap.xml
