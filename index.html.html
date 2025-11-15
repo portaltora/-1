@@ -362,6 +362,7 @@ const categoryFilter = document.getElementById('categoryFilter');
 const searchQuery = document.getElementById('searchQuery');
 let isAdmin = false;
 let editIndex = null;
+let userEmail = localStorage.getItem("userEmail") || null;
 
 function renderLinks() {
   const cat = categoryFilter.value;
@@ -391,13 +392,14 @@ function renderLinks() {
     const img = div.querySelector('img');
     const a = div.querySelector('a');
 
-    img.addEventListener('click', () => {
-      if(localStorage.getItem("userEmail")){
-        window.open(a.href, '_blank');
-      } else {
-        showRegistrationOverlay();
-      }
-    });
+img.addEventListener('click', () => {
+  if(userEmail){
+    window.open(a.href, '_blank');
+  } else {
+    showRegistrationOverlay();
+  }
+});
+
   });
 }
 
@@ -534,8 +536,10 @@ categoryFilter.addEventListener('change', renderLinks);
 searchQuery.addEventListener('input', renderLinks);
 
 document.addEventListener("DOMContentLoaded", function(){
+  document.getElementById('adminPanel').style.display = 'none';
   renderLinks();
 });
+
 function exportUpdatedHTML() {
   const newLinksJson = JSON.stringify(links, null, 2);
   const fullHtml = document.documentElement.outerHTML;
@@ -614,6 +618,7 @@ function exportUpdatedHTML() {
 
 </body>
 </html>
+
 
 
 
