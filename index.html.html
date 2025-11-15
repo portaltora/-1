@@ -421,10 +421,38 @@ function addLink() {
   const image = document.getElementById('newImage').value;
   const description = document.getElementById('newDescription').value;
   const category = document.getElementById('newCategory').value;
-  if(!title || !url) { alert("יש למלא כותרת וכתובת"); return; }
-  links.push({title, url, category, image, description});
-  localStorage.setItem('links', JSON.stringify(links));
+
+  if(!title || !url) {
+    alert("יש למלא כותרת וכתובת");
+    return;
+  }
+
+  // מוסיפים קישור חדש למערך
+  links.push({ title, url, category, image, description });
   renderLinks();
+
+  // --- שמירה בתוך הקוד עצמו ---
+  const html = document.documentElement.outerHTML;
+
+  // ממירים את מערך links לטקסט JSON יפה
+  const newLinksText = JSON.stringify(links, null, 2);
+
+  // מחליפים את תוכן המערך בקובץ
+  const updatedHTML = html.replace(
+    /let links = \[[\s\S]*?\];/,
+    "let links = " + newLinksText + ";"
+  );
+
+  // יוצרים קובץ חדש אוטומטית
+  const blob = new Blob([updatedHTML], { type: "text/html" });
+  const urlBlob = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = urlBlob;
+  a.download = "portal_updated.html";
+  a.click();
+  URL.revokeObjectURL(urlBlob);
+
+  alert("הקישור נוסף! הורדנו לך קובץ HTML חדש — העלה אותו לנטליפיי.");
 }
 
 function removeLink(index) {
@@ -536,6 +564,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
 </body>
 </html>
+
 
 
 
