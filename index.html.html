@@ -113,6 +113,9 @@ button.contact { background: #007BFF; color: #fff; margin-top:10px; width:100%; 
     <button onclick="downloadJSON()">שמירה ל-JSON</button>
     <input type="file" id="uploadJSON" accept=".json" style="margin-top:10px;">
     <button onclick="uploadJSON()">טעינת JSON</button>
+  <button onclick="exportUpdatedHTML()" style="background:#6a5acd; color:white; margin-top:10px;">
+  ייצא קובץ HTML חדש
+</button>
   </div>
 </div>
 
@@ -533,6 +536,28 @@ searchQuery.addEventListener('input', renderLinks);
 document.addEventListener("DOMContentLoaded", function(){
   renderLinks();
 });
+function exportUpdatedHTML() {
+  const newLinksJson = JSON.stringify(links, null, 2);
+  const fullHtml = document.documentElement.outerHTML;
+
+  const updatedHtml = fullHtml.replace(
+    /let links = \[[\s\S]*?\];/,
+    "let links = " + newLinksJson + ";"
+  );
+
+  const blob = new Blob([updatedHtml], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "portal_updated.html";
+  a.click();
+
+  URL.revokeObjectURL(url);
+
+  alert("✔ הקובץ החדש מוכן! הורדנו אותו למחשב שלך.");
+}
+
 </script>
 
  <!-- 🔍 פסקת SEO מוסתרת (לטובת אינדוקס) -->
@@ -564,6 +589,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
 </body>
 </html>
+
 
 
 
