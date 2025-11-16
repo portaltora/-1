@@ -1214,6 +1214,42 @@ document.getElementById("emailForm").addEventListener("submit", function(e){
     }).catch(()=>alert("שגיאה בשליחה"));
   }
 });
+let editIndex = null;
+
+window.openEditModal = function(i) {
+  editIndex = i;
+
+  const link = links[i];
+
+  document.getElementById("editTitle").value = link.title;
+  document.getElementById("editUrl").value = link.url;
+  document.getElementById("editImage").value = link.image || "";
+  document.getElementById("editDescription").value = link.description || "";
+  document.getElementById("editCategory").value = link.category;
+
+  document.getElementById("editModal").style.display = "flex";
+};
+
+function closeEditModal() {
+  document.getElementById("editModal").style.display = "none";
+}
+
+function saveEdit() {
+  const edited = {
+    title: document.getElementById("editTitle").value,
+    url: document.getElementById("editUrl").value,
+    image: document.getElementById("editImage").value,
+    description: document.getElementById("editDescription").value,
+    category: document.getElementById("editCategory").value
+  };
+
+  links[editIndex] = edited;
+
+  closeEditModal();
+  renderLinks();
+
+  alert("הקישור נערך בהצלחה!");
+}
 
 categoryFilter.addEventListener('change', renderLinks);
 searchQuery.addEventListener('input', renderLinks);
