@@ -7,7 +7,8 @@
 
 <!-- 🧩 Structured Data (Schema.org) לזיהוי מדויק בגוגל -->
 <script type="application/ld+json">
-{
+let dismissedPopup = localStorage.getItem("dismissedPopup") === "true";
+  {
   "@context": "https://schema.org",
   "@type": "EducationalOrganization",
   "name": "פורטל עולם התורה",
@@ -29,7 +30,7 @@
   "inLanguage": "he"
 }
 </script>
-
+  
 <!-- 🔍 תיוג נוסף לעומק הקטגוריות -->
 <meta property="article:tag" content="לימודי רבנות">
 <meta property="article:tag" content="קורס הלכה">
@@ -672,7 +673,7 @@ button.contact { background: #007BFF; color: #fff; margin-top:10px; width:100%; 
       בהגשת הטופס אתה מצטרף למעגל העדכונים של האתר — הישאר מעודכן!
     </p>
     <button type="submit">שלח</button>
-    <button type="button" onclick="hideRegistrationOverlay()" style="margin-top:10px; background:#ccc; color:#000;">לא עכשיו</button>
+<button onclick="dismissPopup()">לא עכשיו</button>
   </form>
 </div>
 
@@ -1088,6 +1089,11 @@ function showRegistrationOverlay() {
 function hideRegistrationOverlay() {
   document.getElementById("registrationOverlay").style.display = "none";
 }
+function dismissPopup() {
+  localStorage.setItem("dismissedPopup", "true");
+  dismissedPopup = true;
+  hideRegistrationOverlay();
+}
 
 function loginAdmin() {
   const pw = document.getElementById('adminPassword').value;
@@ -1212,12 +1218,14 @@ document.getElementById("emailForm").addEventListener("submit", function(e){
   }
 });
 
-categoryFilter.addEventListener('change', renderLinks);
-searchQuery.addEventListener('input', renderLinks);
-
 document.addEventListener("DOMContentLoaded", function(){
   document.getElementById('adminPanel').style.display = 'none';
   renderLinks();
+
+  // מציג את ההודעה רק אם אין אימייל ולא בוטל בעבר
+  if (!userEmail && !dismissedPopup) {
+    showRegistrationOverlay();
+  }
 });
 
 function exportUpdatedHTML() {
