@@ -1074,7 +1074,7 @@ div.addEventListener("drop", dropItem);
     const a = div.querySelector('a');
 
 img.addEventListener('click', () => {
-  if(userEmail){
+  if (userEmail || dismissedPopup) {
     window.open(a.href, '_blank');
   } else {
     showRegistrationOverlay();
