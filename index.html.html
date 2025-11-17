@@ -7,7 +7,7 @@
 
 <!-- 🧩 Structured Data (Schema.org) לזיהוי מדויק בגוגל -->
 <script type="application/ld+json">
-let dismissedPopup = localStorage.getItem("dismissedPopup") === "true";
+  
   {
   "@context": "https://schema.org",
   "@type": "EducationalOrganization",
@@ -1036,7 +1036,8 @@ const searchQuery = document.getElementById('searchQuery');
 let isAdmin = false;
 let editIndex = null;
 let userEmail = localStorage.getItem("userEmail") || null;
-
+let dismissedPopup = localStorage.getItem("dismissedPopup") === "true";
+  
 function renderLinks() {
   const cat = categoryFilter.value;
   const query = searchQuery.value.trim().toLowerCase();
